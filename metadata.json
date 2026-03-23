@@ -1,0 +1,5 @@
+{
+  "name": "Hisab Kitab Dashboard",
+  "description": "A comprehensive accounting dashboard for tracking orders, RTOs, returns, and losses with date-based filtering.",
+  "requestFramePermissions": []
+}
