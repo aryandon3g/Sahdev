@@ -273,28 +273,50 @@ export default function App() {
         </div>
 
         <div className="p-4 lg:p-8">
+          {/* Welcome Banner (only if no transactions) */}
+          {transactions.length === 0 && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-8 p-6 bg-indigo-600 rounded-3xl text-white shadow-xl shadow-indigo-100 flex flex-col sm:flex-row items-center justify-between gap-6"
+            >
+              <div className="text-center sm:text-left">
+                <h3 className="text-xl font-bold mb-1">Welcome to Hisab Kitab! 🚀</h3>
+                <p className="text-indigo-100 text-sm">Start tracking your orders, RTOs, and returns in one place.</p>
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setIsModalOpen(true)}
+                  className="px-6 py-2.5 bg-white text-indigo-600 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-colors shadow-sm"
+                >
+                  Add Your First Entry
+                </button>
+                <button 
+                  onClick={() => {
+                    const sample: Transaction[] = [
+                      { id: 'ORD123', customer: 'Rahul Sharma', amount: 1200, type: 'order', date: new Date(), status: 'Delivered' },
+                      { id: 'RTO456', customer: 'Priya Singh', amount: 850, type: 'rto', date: new Date(), status: 'Returned' },
+                      { id: 'RET789', customer: 'Amit Kumar', amount: 500, type: 'return', date: new Date(), status: 'Processed' },
+                    ];
+                    setTransactions(sample);
+                  }}
+                  className="px-6 py-2.5 bg-indigo-500 text-white border border-indigo-400 rounded-xl font-bold text-sm hover:bg-indigo-400 transition-colors"
+                >
+                  Try Sample Data
+                </button>
+              </div>
+            </motion.div>
+          )}
+
           {/* Stats Grid */}
-          <motion.div 
-            initial={false}
-            animate="show"
-            variants={{
-              show: {
-                transition: {
-                  staggerChildren: 0.03
-                }
-              }
-            }}
-            className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-6 mb-8 lg:mb-12"
-          >
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-6 mb-8 lg:mb-12">
             {statCards.map((card, idx) => (
               <motion.div
-                variants={{
-                  show: { opacity: 1, scale: 1, y: 0 }
-                }}
-                initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.98, y: 5 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
                 key={card.label}
-                className={`bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow will-change-transform ${idx === 4 ? 'col-span-2 lg:col-span-1' : ''}`}
+                initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.05, duration: 0.3 }}
+                className={`bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${idx === 4 ? 'col-span-2 lg:col-span-1' : ''}`}
               >
                 <div className={`${card.bg} ${card.color} w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center mb-3 sm:mb-4`}>
                   <card.icon size={18} className="sm:size-5" />
@@ -303,7 +325,7 @@ export default function App() {
                 <h3 className="text-lg sm:text-2xl font-bold mt-1 truncate">{card.value}</h3>
               </motion.div>
             ))}
-          </motion.div>
+          </div>
 
           {/* Content Area */}
           <div className="bg-white rounded-2xl lg:rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
