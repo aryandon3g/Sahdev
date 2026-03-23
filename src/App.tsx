@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { format, addDays, subDays, isSameDay } from 'date-fns';
+import * as XLSX from 'xlsx';
 
 // --- Firebase Integration ---
 import { 
@@ -108,7 +109,7 @@ const LoginScreen = ({ onLogin }: { onLogin: () => void }) => (
       <div className="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-indigo-200 mx-auto mb-8">
         <Lock size={32} />
       </div>
-      <h1 className="text-3xl font-black tracking-tight text-slate-900 mb-2">Hisab Kitab</h1>
+      <h1 className="text-3xl font-black tracking-tight text-slate-900 mb-2">Sahdev</h1>
       <p className="text-slate-500 font-medium mb-10">Sign in to manage your business transactions securely.</p>
       
       <button 
@@ -212,6 +213,24 @@ function Dashboard() {
       console.error("Logout failed", error);
     }
   };
+
+  const handleExportExcel = useCallback(() => {
+    if (transactions.length === 0) return;
+    
+    const dataToExport = transactions.map(t => ({
+      ID: t.id,
+      Date: format(t.date, 'yyyy-MM-dd'),
+      Customer: t.customer,
+      Type: t.type.toUpperCase(),
+      Amount: t.amount,
+      Status: t.status
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Transactions");
+    XLSX.writeFile(workbook, `Sahdev_Dashboard_Export_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+  }, [transactions]);
 
   // --- Firestore Read ---
   useEffect(() => {
@@ -370,7 +389,7 @@ function Dashboard() {
             <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
               <span className="text-lg font-bold">HK</span>
             </div>
-            <h1 className="mt-3 text-lg font-semibold tracking-tight text-slate-900">Hisab Kitab</h1>
+            <h1 className="mt-3 text-lg font-semibold tracking-tight text-slate-900">Sahdev</h1>
           </div>
           <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-slate-400 hover:text-slate-600">
             <X size={20} />
@@ -438,8 +457,16 @@ function Dashboard() {
             </div>
           </div>
 
-          {/* Date Selector */}
-          <div className="flex items-center gap-2 sm:gap-4 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm">
+            <button 
+              onClick={handleExportExcel}
+              className="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-xl font-bold hover:bg-emerald-100 transition-all shadow-sm"
+            >
+              <TrendingDown size={18} className="rotate-180" />
+              <span>Export Excel</span>
+            </button>
+
+            {/* Date Selector */}
+            <div className="flex items-center gap-2 sm:gap-4 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm">
             <button 
               onClick={() => setSelectedDate(prev => subDays(prev, 1))}
               className="p-1.5 hover:bg-slate-50 rounded-lg transition-colors text-slate-400 hover:text-slate-600"
