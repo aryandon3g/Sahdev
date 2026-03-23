@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo, memo, useCallback } from 'react';
+import React, { useState, useMemo, memo, useCallback, useEffect } from 'react';
 import { 
   LayoutDashboard, 
   Truck, 
@@ -19,10 +19,28 @@ import {
   Plus,
   X,
   Trash2,
-  Menu
+  Menu,
+  LogOut,
+  Lock
 } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { format, addDays, subDays, isSameDay } from 'date-fns';
+
+// --- Firebase Placeholder (User will add real config later) ---
+/*
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'firebase/auth';
+import { getFirestore, collection, addDoc, onSnapshot, query, where, deleteDoc, doc } from 'firebase/firestore';
+
+const firebaseConfig = {
+  // Add your config here
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+*/
 
 // --- Types ---
 type TransactionType = 'order' | 'rto' | 'return' | 'dispatch';
@@ -36,6 +54,47 @@ interface Transaction {
   customer: string;
   status: string;
 }
+
+interface User {
+  uid: string;
+  displayName: string;
+  email: string;
+  photoURL: string;
+}
+
+// --- Login Screen Component ---
+const LoginScreen = ({ onLogin }: { onLogin: () => void }) => (
+  <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center p-4">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl shadow-indigo-100 p-8 lg:p-12 text-center border border-slate-100"
+    >
+      <div className="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-indigo-200 mx-auto mb-8">
+        <Lock size={32} />
+      </div>
+      <h1 className="text-3xl font-black tracking-tight text-slate-900 mb-2">Hisab Kitab</h1>
+      <p className="text-slate-500 font-medium mb-10">Sign in to manage your business transactions securely.</p>
+      
+      <button 
+        onClick={onLogin}
+        className="w-full flex items-center justify-center gap-4 bg-white border-2 border-slate-100 py-4 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-200 transition-all active:scale-[0.98] shadow-sm"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        <span>Continue with Google</span>
+      </button>
+      
+      <p className="mt-8 text-xs text-slate-400 font-medium">
+        By continuing, you agree to our Terms of Service and Privacy Policy.
+      </p>
+    </motion.div>
+  </div>
+);
 
 // --- Memoized Table Row ---
 const TransactionRow = memo(({ item, onDelete }: { item: Transaction; onDelete: (id: string) => void }) => (
@@ -76,12 +135,60 @@ const TransactionRow = memo(({ item, onDelete }: { item: Transaction; onDelete: 
 
 export default function App() {
   const shouldReduceMotion = useReducedMotion();
+  const [user, setUser] = useState<User | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [activeView, setActiveView] = useState<ViewType>('all');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // --- Auth Logic Placeholder ---
+  /*
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        setUser({
+          uid: currentUser.uid,
+          displayName: currentUser.displayName || 'User',
+          email: currentUser.email || '',
+          photoURL: currentUser.photoURL || ''
+        });
+      } else {
+        setUser(null);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleGoogleLogin = async () => {
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Login failed", error);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Logout failed", error);
+    }
+  };
+  */
+
+  // Dummy Auth for now
+  const handleDummyLogin = () => {
+    setUser({
+      uid: '123',
+      displayName: 'Aryan Kumar',
+      email: 'aryan@example.com',
+      photoURL: 'https://picsum.photos/seed/user/100/100'
+    });
+  };
+
+  const handleLogout = () => setUser(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -107,7 +214,7 @@ export default function App() {
     });
   }, [transactions, selectedDate, activeView, searchQuery]);
 
-  // Statistics calculation (Total across all dates for the summary)
+  // Statistics calculation
   const stats = useMemo(() => {
     const totalOrders = transactions.filter(d => d.type === 'order').length;
     const totalRto = transactions.filter(d => d.type === 'rto').length;
@@ -128,18 +235,51 @@ export default function App() {
       customer: formData.customer,
       amount: parseFloat(formData.amount),
       type: formData.type,
-      date: selectedDate, // Add to the currently selected date
+      date: selectedDate,
       status: formData.status || (formData.type === 'order' ? 'Delivered' : formData.type === 'dispatch' ? 'Shipped' : 'Processed')
     };
+
+    // --- Firestore Write Placeholder ---
+    /*
+    if (user) {
+      await addDoc(collection(db, `users/${user.uid}/transactions`), {
+        ...newEntry,
+        date: newEntry.date.toISOString() // Firestore prefers ISO or Timestamps
+      });
+    }
+    */
 
     setTransactions(prev => [newEntry, ...prev]);
     setIsModalOpen(false);
     setFormData({ customer: '', amount: '', type: 'order', status: 'Delivered' });
-  }, [formData, selectedDate]);
+  }, [formData, selectedDate, user]);
 
   const deleteTransaction = useCallback((id: string) => {
+    // --- Firestore Delete Placeholder ---
+    /*
+    if (user) {
+      await deleteDoc(doc(db, `users/${user.uid}/transactions`, id));
+    }
+    */
     setTransactions(prev => prev.filter(t => t.id !== id));
-  }, []);
+  }, [user]);
+
+  // --- Firestore Read Placeholder ---
+  /*
+  useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, `users/${user.uid}/transactions`));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id,
+        date: new Date(doc.data().date)
+      })) as Transaction[];
+      setTransactions(data);
+    });
+    return () => unsubscribe();
+  }, [user]);
+  */
 
   const navItems = [
     { id: 'all', label: 'Dashboard', icon: LayoutDashboard },
@@ -156,6 +296,10 @@ export default function App() {
     { label: 'Total Loss', value: `₹${stats.totalLoss}`, icon: TrendingDown, color: 'text-red-600', bg: 'bg-red-50' },
     { label: 'Total Dispatch', value: stats.totalDispatch, icon: Send, color: 'text-emerald-600', bg: 'bg-emerald-50' },
   ];
+
+  if (!user) {
+    return <LoginScreen onLogin={handleDummyLogin} />;
+  }
 
   return (
     <div className="flex h-screen bg-[#F8F9FA] font-sans text-slate-900 overflow-hidden">
@@ -219,7 +363,7 @@ export default function App() {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-slate-100 min-w-[256px]">
+        <div className="p-4 border-t border-slate-100 min-w-[256px] space-y-2">
           <button 
             onClick={() => {
               setIsModalOpen(true);
@@ -229,6 +373,14 @@ export default function App() {
           >
             <Plus size={20} />
             <span>New Entry</span>
+          </button>
+          
+          <button 
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 py-3 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all font-semibold"
+          >
+            <LogOut size={18} />
+            <span>Logout</span>
           </button>
         </div>
       </motion.aside>
@@ -244,9 +396,12 @@ export default function App() {
             >
               <Menu size={20} />
             </button>
-            <h2 className="text-xl font-bold tracking-tight text-slate-900 capitalize hidden sm:block">
-              {activeView === 'all' ? 'Overview' : activeView}
-            </h2>
+            <div className="hidden sm:block text-left">
+              <h2 className="text-xl font-bold tracking-tight text-slate-900 capitalize">
+                {activeView === 'all' ? 'Overview' : activeView}
+              </h2>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Welcome, {user.displayName}</p>
+            </div>
           </div>
 
           {/* Date Selector */}
@@ -273,41 +428,6 @@ export default function App() {
         </div>
 
         <div className="p-4 lg:p-8">
-          {/* Welcome Banner (only if no transactions) */}
-          {transactions.length === 0 && (
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-8 p-6 bg-indigo-600 rounded-3xl text-white shadow-xl shadow-indigo-100 flex flex-col sm:flex-row items-center justify-between gap-6"
-            >
-              <div className="text-center sm:text-left">
-                <h3 className="text-xl font-bold mb-1">Welcome to Hisab Kitab! 🚀</h3>
-                <p className="text-indigo-100 text-sm">Start tracking your orders, RTOs, and returns in one place.</p>
-              </div>
-              <div className="flex gap-3">
-                <button 
-                  onClick={() => setIsModalOpen(true)}
-                  className="px-6 py-2.5 bg-white text-indigo-600 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-colors shadow-sm"
-                >
-                  Add Your First Entry
-                </button>
-                <button 
-                  onClick={() => {
-                    const sample: Transaction[] = [
-                      { id: 'ORD123', customer: 'Rahul Sharma', amount: 1200, type: 'order', date: new Date(), status: 'Delivered' },
-                      { id: 'RTO456', customer: 'Priya Singh', amount: 850, type: 'rto', date: new Date(), status: 'Returned' },
-                      { id: 'RET789', customer: 'Amit Kumar', amount: 500, type: 'return', date: new Date(), status: 'Processed' },
-                    ];
-                    setTransactions(sample);
-                  }}
-                  className="px-6 py-2.5 bg-indigo-500 text-white border border-indigo-400 rounded-xl font-bold text-sm hover:bg-indigo-400 transition-colors"
-                >
-                  Try Sample Data
-                </button>
-              </div>
-            </motion.div>
-          )}
-
           {/* Stats Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-6 mb-8 lg:mb-12">
             {statCards.map((card, idx) => (
