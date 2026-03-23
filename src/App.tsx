@@ -1,9 +1,4 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import React, { useState, useMemo, memo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, memo, useCallback, useEffect, ErrorInfo, ReactNode } from 'react';
 import { 
   LayoutDashboard, 
   Truck, 
@@ -26,21 +21,25 @@ import {
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { format, addDays, subDays, isSameDay } from 'date-fns';
 
-// --- Firebase Placeholder (User will add real config later) ---
-/*
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'firebase/auth';
-import { getFirestore, collection, addDoc, onSnapshot, query, where, deleteDoc, doc } from 'firebase/firestore';
-
-const firebaseConfig = {
-  // Add your config here
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const provider = new GoogleAuthProvider();
-*/
+// --- Firebase Integration ---
+import { 
+  auth, 
+  db, 
+  provider, 
+  signInWithPopup, 
+  onAuthStateChanged, 
+  signOut, 
+  collection, 
+  addDoc, 
+  onSnapshot, 
+  query, 
+  where, 
+  deleteDoc, 
+  doc, 
+  setDoc,
+  handleFirestoreError,
+  OperationType
+} from './firebase';
 
 // --- Types ---
 type TransactionType = 'order' | 'rto' | 'return' | 'dispatch';
@@ -53,6 +52,7 @@ interface Transaction {
   date: Date;
   customer: string;
   status: string;
+  uid: string;
 }
 
 interface User {
@@ -60,6 +60,41 @@ interface User {
   displayName: string;
   email: string;
   photoURL: string;
+}
+
+// --- Error Boundary ---
+class ErrorBoundary extends React.Component<any, any> {
+  state = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error: error.message };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-red-50 flex items-center justify-center p-6">
+          <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center">
+            <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Something went wrong</h2>
+            <p className="text-slate-600 mb-6 text-sm">{this.state.error}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors"
+            >
+              Reload Application
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (this as any).props.children;
+  }
 }
 
 // --- Login Screen Component ---
@@ -133,9 +168,10 @@ const TransactionRow = memo(({ item, onDelete }: { item: Transaction; onDelete: 
   </motion.tr>
 ));
 
-export default function App() {
+function Dashboard() {
   const shouldReduceMotion = useReducedMotion();
   const [user, setUser] = useState<User | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [activeView, setActiveView] = useState<ViewType>('all');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -143,8 +179,7 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // --- Auth Logic Placeholder ---
-  /*
+  // --- Auth Logic ---
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
@@ -157,6 +192,7 @@ export default function App() {
       } else {
         setUser(null);
       }
+      setIsAuthReady(true);
     });
     return () => unsubscribe();
   }, []);
@@ -176,19 +212,26 @@ export default function App() {
       console.error("Logout failed", error);
     }
   };
-  */
 
-  // Dummy Auth for now
-  const handleDummyLogin = () => {
-    setUser({
-      uid: '123',
-      displayName: 'Aryan Kumar',
-      email: 'aryan@example.com',
-      photoURL: 'https://picsum.photos/seed/user/100/100'
+  // --- Firestore Read ---
+  useEffect(() => {
+    if (!user || !isAuthReady) return;
+    const path = `users/${user.uid}/transactions`;
+    const q = query(collection(db, path));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id,
+        date: new Date(doc.data().date)
+      })) as Transaction[];
+      setTransactions(data);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, path);
     });
-  };
-
-  const handleLogout = () => setUser(null);
+    
+    return () => unsubscribe();
+  }, [user, isAuthReady]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -226,60 +269,39 @@ export default function App() {
     return { totalOrders, totalRto, totalReturns, totalDispatch, totalLoss };
   }, [transactions]);
 
-  const handleAddEntry = useCallback((e: React.FormEvent) => {
+  const handleAddEntry = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.customer || !formData.amount) return;
+    if (!formData.customer || !formData.amount || !user) return;
 
-    const newEntry: Transaction = {
+    const newEntry = {
       id: Math.random().toString(36).substr(2, 9).toUpperCase(),
       customer: formData.customer,
       amount: parseFloat(formData.amount),
       type: formData.type,
-      date: selectedDate,
-      status: formData.status || (formData.type === 'order' ? 'Delivered' : formData.type === 'dispatch' ? 'Shipped' : 'Processed')
+      date: selectedDate.toISOString(),
+      status: formData.status || (formData.type === 'order' ? 'Delivered' : formData.type === 'dispatch' ? 'Shipped' : 'Processed'),
+      uid: user.uid
     };
 
-    // --- Firestore Write Placeholder ---
-    /*
-    if (user) {
-      await addDoc(collection(db, `users/${user.uid}/transactions`), {
-        ...newEntry,
-        date: newEntry.date.toISOString() // Firestore prefers ISO or Timestamps
-      });
+    const path = `users/${user.uid}/transactions`;
+    try {
+      await addDoc(collection(db, path), newEntry);
+      setIsModalOpen(false);
+      setFormData({ customer: '', amount: '', type: 'order', status: 'Delivered' });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
     }
-    */
-
-    setTransactions(prev => [newEntry, ...prev]);
-    setIsModalOpen(false);
-    setFormData({ customer: '', amount: '', type: 'order', status: 'Delivered' });
   }, [formData, selectedDate, user]);
 
-  const deleteTransaction = useCallback((id: string) => {
-    // --- Firestore Delete Placeholder ---
-    /*
-    if (user) {
-      await deleteDoc(doc(db, `users/${user.uid}/transactions`, id));
-    }
-    */
-    setTransactions(prev => prev.filter(t => t.id !== id));
-  }, [user]);
-
-  // --- Firestore Read Placeholder ---
-  /*
-  useEffect(() => {
+  const deleteTransaction = useCallback(async (id: string) => {
     if (!user) return;
-    const q = query(collection(db, `users/${user.uid}/transactions`));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({
-        ...doc.data(),
-        id: doc.id,
-        date: new Date(doc.data().date)
-      })) as Transaction[];
-      setTransactions(data);
-    });
-    return () => unsubscribe();
+    const path = `users/${user.uid}/transactions/${id}`;
+    try {
+      await deleteDoc(doc(db, path));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
   }, [user]);
-  */
 
   const navItems = [
     { id: 'all', label: 'Dashboard', icon: LayoutDashboard },
@@ -297,8 +319,20 @@ export default function App() {
     { label: 'Total Dispatch', value: stats.totalDispatch, icon: Send, color: 'text-emerald-600', bg: 'bg-emerald-50' },
   ];
 
+  if (!isAuthReady) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+        <motion.div 
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+          className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full"
+        />
+      </div>
+    );
+  }
+
   if (!user) {
-    return <LoginScreen onLogin={handleDummyLogin} />;
+    return <LoginScreen onLogin={handleGoogleLogin} />;
   }
 
   return (
@@ -606,5 +640,13 @@ export default function App() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <Dashboard />
+    </ErrorBoundary>
   );
 }

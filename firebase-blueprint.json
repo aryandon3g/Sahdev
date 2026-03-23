@@ -1,0 +1,25 @@
+{
+  "entities": {
+    "Transaction": {
+      "title": "Transaction",
+      "description": "A business transaction record (order, RTO, return, dispatch).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ID of the transaction." },
+        "type": { "type": "string", "enum": ["order", "rto", "return", "dispatch"], "description": "Type of transaction." },
+        "amount": { "type": "number", "description": "Amount in INR." },
+        "date": { "type": "string", "format": "date-time", "description": "ISO 8601 date string." },
+        "customer": { "type": "string", "description": "Name of the customer." },
+        "status": { "type": "string", "description": "Current status of the transaction." },
+        "uid": { "type": "string", "description": "User ID of the owner." }
+      },
+      "required": ["id", "type", "amount", "date", "customer", "status", "uid"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "User-specific transactions."
+    }
+  }
+}
