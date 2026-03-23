@@ -571,13 +571,25 @@ export default function App() {
 
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Status</label>
-                  <input 
-                    type="text" 
+                  <select 
                     value={formData.status}
                     onChange={(e) => setFormData({...formData, status: e.target.value})}
-                    placeholder="e.g. Delivered"
-                    className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-500 outline-none transition-all font-bold"
-                  />
+                    className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-500 outline-none transition-all font-bold appearance-none"
+                  >
+                    <option value="Delivered">Delivered</option>
+                    <option value="Shipped">Shipped</option>
+                    <option value="Out for Delivery">Out for Delivery</option>
+                    <option value="In Transit">In Transit</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Processed">Processed</option>
+                    <option value="Ready to Ship">Ready to Ship</option>
+                    <option value="Dispatched">Dispatched</option>
+                    <option value="Cancelled">Cancelled</option>
+                    <option value="Returned">Returned</option>
+                    <option value="RTO Initiated">RTO Initiated</option>
+                    <option value="RTO Delivered">RTO Delivered</option>
+                    <option value="Refunded">Refunded</option>
+                  </select>
                 </div>
 
                 <div className="pt-4">
