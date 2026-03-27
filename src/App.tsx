@@ -43,8 +43,8 @@ import {
 } from './firebase';
 
 // --- Types ---
-type TransactionType = 'order' | 'rto' | 'return' | 'dispatch';
-type ViewType = 'all' | 'orders' | 'rto' | 'returns' | 'date';
+type TransactionType = 'order' | 'rto' | 'return' | 'dispatch' | 'product_rto' | 'margin' | 'gst' | 'donation' | 'meesho_payment' | 'receive_payment' | 'receive_payment_addon';
+type ViewType = 'all' | 'orders' | 'rto' | 'returns' | 'date' | 'accounts';
 
 interface Transaction {
   id: string;
@@ -179,6 +179,7 @@ function Dashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(0); // 0: Main Dashboard, 1: Accounts Dashboard
 
   // --- Auth Logic ---
   useEffect(() => {
@@ -285,7 +286,20 @@ function Dashboard() {
     const totalLoss = transactions.filter(d => d.type === 'rto' || d.type === 'return')
       .reduce((acc, curr) => acc + curr.amount, 0);
 
-    return { totalOrders, totalRto, totalReturns, totalDispatch, totalLoss };
+    // Page 2 Stats
+    const totalProductRto = transactions.filter(d => d.type === 'product_rto').reduce((acc, curr) => acc + curr.amount, 0);
+    const totalMargin = transactions.filter(d => d.type === 'margin').reduce((acc, curr) => acc + curr.amount, 0);
+    const totalGst = transactions.filter(d => d.type === 'gst').reduce((acc, curr) => acc + curr.amount, 0);
+    const totalDonation = transactions.filter(d => d.type === 'donation').reduce((acc, curr) => acc + curr.amount, 0);
+    const totalMeeshoPayment = transactions.filter(d => d.type === 'meesho_payment').reduce((acc, curr) => acc + curr.amount, 0);
+    const totalReceivePayment = transactions.filter(d => d.type === 'receive_payment').reduce((acc, curr) => acc + curr.amount, 0);
+    const totalReceivePaymentAddon = transactions.filter(d => d.type === 'receive_payment_addon').reduce((acc, curr) => acc + curr.amount, 0);
+
+    return { 
+      totalOrders, totalRto, totalReturns, totalDispatch, totalLoss,
+      totalProductRto, totalMargin, totalGst, totalDonation,
+      totalMeeshoPayment, totalReceivePayment, totalReceivePaymentAddon
+    };
   }, [transactions]);
 
   const handleAddEntry = useCallback(async (e: React.FormEvent) => {
@@ -330,13 +344,25 @@ function Dashboard() {
     { id: 'date', label: 'Date Filter', icon: CalendarIcon },
   ];
 
-  const statCards = [
-    { label: 'Total Orders', value: stats.totalOrders, icon: Package, color: 'text-blue-600', bg: 'bg-blue-50', type: 'order' as TransactionType },
-    { label: 'Total RTO', value: stats.totalRto, icon: Truck, color: 'text-orange-600', bg: 'bg-orange-50', type: 'rto' as TransactionType },
-    { label: 'Total Return', value: stats.totalReturns, icon: RotateCcw, color: 'text-purple-600', bg: 'bg-purple-50', type: 'return' as TransactionType },
-    { label: 'Total Loss', value: `₹${stats.totalLoss}`, icon: TrendingDown, color: 'text-red-600', bg: 'bg-red-50', type: 'rto' as TransactionType },
-    { label: 'Total Dispatch', value: stats.totalDispatch, icon: Send, color: 'text-emerald-600', bg: 'bg-emerald-50', type: 'dispatch' as TransactionType },
-  ];
+  const statCards = useMemo(() => {
+    if (currentPage === 0) {
+      return [
+        { label: 'Total Orders', value: stats.totalOrders, icon: Package, color: 'text-blue-600', bg: 'bg-blue-50', type: 'order' as TransactionType },
+        { label: 'Total RTO', value: stats.totalRto, icon: Truck, color: 'text-orange-600', bg: 'bg-orange-50', type: 'rto' as TransactionType },
+        { label: 'Total Return', value: stats.totalReturns, icon: RotateCcw, color: 'text-purple-600', bg: 'bg-purple-50', type: 'return' as TransactionType },
+        { label: 'Total Loss', value: `₹${stats.totalLoss}`, icon: TrendingDown, color: 'text-red-600', bg: 'bg-red-50', type: 'rto' as TransactionType },
+        { label: 'Total Dispatch', value: stats.totalDispatch, icon: Send, color: 'text-emerald-600', bg: 'bg-emerald-50', type: 'dispatch' as TransactionType },
+      ];
+    } else {
+      return [
+        { label: 'Product RTO account', value: `₹${stats.totalProductRto}`, icon: Truck, color: 'text-blue-600', bg: 'bg-blue-50', type: 'product_rto' as TransactionType },
+        { label: 'Margin account', value: `₹${stats.totalMargin}`, icon: TrendingDown, color: 'text-orange-600', bg: 'bg-orange-50', type: 'margin' as TransactionType },
+        { label: 'GST account', value: `₹${stats.totalGst}`, icon: RotateCcw, color: 'text-purple-600', bg: 'bg-purple-50', type: 'gst' as TransactionType },
+        { label: 'Donation account', value: `₹${stats.totalDonation}`, icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-50', type: 'donation' as TransactionType },
+        { label: 'Meesho Payment', value: `₹${stats.totalMeeshoPayment}`, icon: Send, color: 'text-emerald-600', bg: 'bg-emerald-50', type: 'meesho_payment' as TransactionType },
+      ];
+    }
+  }, [currentPage, stats]);
 
   if (!isAuthReady) {
     return (
@@ -475,6 +501,15 @@ function Dashboard() {
               <ChevronRight size={18} />
             </button>
           </div>
+
+          {/* Page Toggle Button */}
+          <button 
+            onClick={() => setCurrentPage(prev => (prev === 0 ? 1 : 0))}
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-xl font-bold hover:bg-indigo-100 transition-all shadow-sm ml-2"
+          >
+            <span>{currentPage === 0 ? 'Next Page' : 'Prev Page'}</span>
+            <ChevronRight size={18} className={currentPage === 1 ? 'rotate-180' : ''} />
+          </button>
         </div>
 
         <div className="p-4 lg:p-8">
@@ -554,6 +589,24 @@ function Dashboard() {
               </table>
             </div>
           </div>
+
+          {/* Page 2 Specific Footer Stats */}
+          {currentPage === 1 && (
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total Meesho Payment</p>
+                <h3 className="text-xl font-bold mt-1 text-emerald-600">₹{stats.totalMeeshoPayment}</h3>
+              </div>
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total Receive Payment</p>
+                <h3 className="text-xl font-bold mt-1 text-blue-600">₹{stats.totalReceivePayment}</h3>
+              </div>
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Receive Payment Addon</p>
+                <h3 className="text-xl font-bold mt-1 text-purple-600">₹{stats.totalReceivePaymentAddon}</h3>
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
@@ -618,6 +671,13 @@ function Dashboard() {
                       <option value="rto">RTO</option>
                       <option value="return">Return</option>
                       <option value="dispatch">Dispatch</option>
+                      <option value="product_rto">Product RTO</option>
+                      <option value="margin">Margin</option>
+                      <option value="gst">GST</option>
+                      <option value="donation">Donation</option>
+                      <option value="meesho_payment">Meesho Payment</option>
+                      <option value="receive_payment">Receive Payment</option>
+                      <option value="receive_payment_addon">Receive Payment Addon</option>
                     </select>
                   </div>
                 </div>
