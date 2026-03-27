@@ -331,11 +331,11 @@ function Dashboard() {
   ];
 
   const statCards = [
-    { label: 'Total Orders', value: stats.totalOrders, icon: Package, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Total RTO', value: stats.totalRto, icon: Truck, color: 'text-orange-600', bg: 'bg-orange-50' },
-    { label: 'Total Return', value: stats.totalReturns, icon: RotateCcw, color: 'text-purple-600', bg: 'bg-purple-50' },
-    { label: 'Total Loss', value: `₹${stats.totalLoss}`, icon: TrendingDown, color: 'text-red-600', bg: 'bg-red-50' },
-    { label: 'Total Dispatch', value: stats.totalDispatch, icon: Send, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'Total Orders', value: stats.totalOrders, icon: Package, color: 'text-blue-600', bg: 'bg-blue-50', type: 'order' as TransactionType },
+    { label: 'Total RTO', value: stats.totalRto, icon: Truck, color: 'text-orange-600', bg: 'bg-orange-50', type: 'rto' as TransactionType },
+    { label: 'Total Return', value: stats.totalReturns, icon: RotateCcw, color: 'text-purple-600', bg: 'bg-purple-50', type: 'return' as TransactionType },
+    { label: 'Total Loss', value: `₹${stats.totalLoss}`, icon: TrendingDown, color: 'text-red-600', bg: 'bg-red-50', type: 'rto' as TransactionType },
+    { label: 'Total Dispatch', value: stats.totalDispatch, icon: Send, color: 'text-emerald-600', bg: 'bg-emerald-50', type: 'dispatch' as TransactionType },
   ];
 
   if (!isAuthReady) {
@@ -418,17 +418,6 @@ function Dashboard() {
 
         <div className="p-4 border-t border-slate-100 min-w-[256px] space-y-2">
           <button 
-            onClick={() => {
-              setIsModalOpen(true);
-              if (window.innerWidth < 1024) setIsSidebarOpen(false);
-            }}
-            className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-colors"
-          >
-            <Plus size={20} />
-            <span>New Entry</span>
-          </button>
-          
-          <button 
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 py-3 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all font-semibold"
           >
@@ -497,7 +486,16 @@ function Dashboard() {
                 initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05, duration: 0.3 }}
-                className={`bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${idx === 4 ? 'col-span-2 lg:col-span-1' : ''}`}
+                onClick={() => {
+                  setFormData({
+                    customer: '',
+                    amount: '',
+                    type: card.type,
+                    status: card.type === 'order' ? 'Delivered' : card.type === 'dispatch' ? 'Shipped' : 'Processed'
+                  });
+                  setIsModalOpen(true);
+                }}
+                className={`bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-indigo-200 active:scale-[0.98] ${idx === 4 ? 'col-span-2 lg:col-span-1' : ''}`}
               >
                 <div className={`${card.bg} ${card.color} w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center mb-3 sm:mb-4`}>
                   <card.icon size={18} className="sm:size-5" />
@@ -547,12 +545,6 @@ function Dashboard() {
                           <div className="flex flex-col items-center gap-3 text-slate-300">
                             <AlertCircle size={48} strokeWidth={1} />
                             <p className="font-bold text-sm uppercase tracking-widest">No entries found</p>
-                            <button 
-                              onClick={() => setIsModalOpen(true)}
-                              className="mt-2 bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-colors"
-                            >
-                              ADD ENTRY
-                            </button>
                           </div>
                         </td>
                       </tr>
